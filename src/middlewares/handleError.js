@@ -38,6 +38,12 @@ export class InternalServerError extends ApiError {
     }
 }
 
+export class TooManyRequestsError extends ApiError {
+    constructor(message) {
+        super(message, StatusCodes.TOO_MANY_REQUESTS);
+    }
+}
+
 // Express identifies error middleware by its 4-argument signature, so `next` must stay.
 export function handleError(error, req, res, next) {
     if (error instanceof ApiError) {

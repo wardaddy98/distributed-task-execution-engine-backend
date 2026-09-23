@@ -9,10 +9,10 @@ const Task = sequelize.define(
       defaultValue: DataTypes.UUIDV4,
       primaryKey: true,
     },
-    // clientId: {
-    //   type: DataTypes.STRING(64),
-    //   allowNull: false,
-    // },
+    clientId: {
+      type: DataTypes.STRING(64),
+      allowNull: false,
+    },
     type: {
       type: DataTypes.ENUM('image_processing', 'report_generation'),
       allowNull: false,

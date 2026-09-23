@@ -3,7 +3,7 @@ import Task from "../../database/models/task.model.js"
 import handlePagination from "../../utils/handlePagination.js"
 
 export const createTask = async (payload) => {
-    const task = await Task.create(payload)
+    const task = await Task.create(payload, { raw: true })
     return task
 }
 

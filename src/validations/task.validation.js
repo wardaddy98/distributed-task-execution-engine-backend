@@ -7,6 +7,7 @@ export const createTaskSchema = Joi.object({
   type: Joi.string()
     .valid(...taskTypes)
     .required(),
+  clientId: Joi.string().required(),
   priority: Joi.number().integer().min(1).max(5).required(),
   payload: Joi.object().default({}),
 });
