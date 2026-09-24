@@ -10,5 +10,6 @@ const constants = cleanEnv(process.env, {
   }),
   DB_URI: str(),
   WORKER_COUNT: num({ default: 4 }),
+  MAX_REQUESTS: num({ default: 10 })
 });
 export default constants;

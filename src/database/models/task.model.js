@@ -9,7 +9,7 @@ const Task = sequelize.define(
       defaultValue: DataTypes.UUIDV4,
       primaryKey: true,
     },
-    clientId: {
+    apiKey: {
       type: DataTypes.STRING(64),
       allowNull: false,
     },

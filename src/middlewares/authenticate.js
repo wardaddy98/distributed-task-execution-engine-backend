@@ -1,7 +1,7 @@
 import { ForbiddenError } from './handleError.js';
 
 const authenticate = (req, res, next) => {
-    const apiKey = req.headers['api-key'];
+    const apiKey = req.headers['x-api-key'];
 
     if (!apiKey) {
         throw new ForbiddenError('Api Key missing');
