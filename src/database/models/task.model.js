@@ -42,14 +42,6 @@ const Task = sequelize.define(
       allowNull: false,
       defaultValue: 0,
     },
-    // lastError: {
-    //   type: DataTypes.TEXT,
-    //   allowNull: true,
-    // },
-    // workerId: {
-    //   type: DataTypes.STRING(64),
-    //   allowNull: true,
-    // },
   },
   {
     tableName: 'tasks',

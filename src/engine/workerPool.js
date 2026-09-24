@@ -1,20 +1,9 @@
 import { Worker } from 'worker_threads';
-import { BadRequestError } from '../middlewares/handleError.js';
+import { emitTaskUpdate } from './taskEvents.js';
+import { emitWorkerUpdate } from './workerEvents.js';
 
-//dequeue
-//per-client rate limiting on task submission — max 10 tasks per minute per client (clients are
-// identified by API key
-//Fair scheduling — no single client should be able to starve others by flooding the queue with high
-// priority tasks. 
-
-
-//update task status- 'queued', 'running', 'completed', 'cancelled', 'failed', 'dead'
-//retry task- maintain another queue for failed tasks , check retries and push in current pool
-
-//dlq - task with status dead, implement dunction to trigger pushing into pool
-
-
-//sse 
+//retry logic
+//proper messages and result in pending promises resolve and reject
 
 class WorkerPool {
 
@@ -28,6 +17,17 @@ class WorkerPool {
     for (let i = 0; i < poolSize; i++) {
       this.createWorker();
     }
+    this.emitWorkerCounts();
+  }
+  getWorkerCounts() {
+    const total = this.workers.length;
+    const idle = this.freeWorkers.length;
+    return { total, idle, busy: total - idle };
+  }
+
+  // Push the latest counts to every connected /worker/events client.
+  emitWorkerCounts() {
+    emitWorkerUpdate(this.getWorkerCounts());
   }
 
   createWorker() {
@@ -46,7 +46,7 @@ class WorkerPool {
         job.data.status = 'completed';
         await job.data.save();
 
-        //SG-FIX emit completed
+        emitTaskUpdate(job.data);
 
         job?.resolve(result);
       } else {
@@ -55,7 +55,7 @@ class WorkerPool {
         job.data.status = 'failed';
         await job.data.save();
 
-        //SG-FIX emit failed
+        emitTaskUpdate(job.data);
 
         job?.reject(error);
 
@@ -83,10 +83,12 @@ class WorkerPool {
     if (task.retries <= 3) {
       this.queueTask(task)
       await task.increment('retries', { by: 1 })
+      emitTaskUpdate(task);
     } else {
       // if max retries reached update status to dead, to represent dlq
       task.status = 'dead';
-      await task.save
+      await task.save()
+      emitTaskUpdate(task);
     }
 
   }
@@ -96,11 +98,13 @@ class WorkerPool {
     this.workers = this.workers.filter(w => w !== worker);
     worker.terminate();
     this.createWorker();
+    this.emitWorkerCounts();
     this.runNextTask();
   }
 
   releaseWorker(worker) {
     this.freeWorkers.push(worker);
+    this.emitWorkerCounts();
     this.runNextTask();
   }
 
@@ -111,14 +115,15 @@ class WorkerPool {
     const worker = this.freeWorkers.shift();
     const job = this.queue.shift();
     worker.currentJob = job;
+    this.emitWorkerCounts();
 
     //update task status in db
     job.data.status = 'running';
     await job.data.save();
 
-    //SG-FIX emit running
+    emitTaskUpdate(job.data);
 
-    worker.postMessage(job.data);
+    worker.postMessage(job.data.toJSON());
   }
 
   queueTask(taskData) {
@@ -142,6 +147,31 @@ class WorkerPool {
 
       this.runNextTask();
     });
+  }
+
+  cancelTask(taskId) {
+    // remove task from queue if it exists
+    // find worker and terminate worker, create new worker
+
+    const queuedTaskIndex = this.queue.findIndex(task => task.data.id === taskId);
+
+    if (queuedTaskIndex === -1) {
+      //task is already working
+      const worker = this.workers.find(w => w?.currentJob?.data?.id === taskId);
+      if (worker) {
+        worker.currentJob?.reject('Task cancelled')
+        worker.currentJob = null;
+        this.workers = this.workers.filter(w => w !== worker);
+        worker.terminate();
+        this.createWorker();
+        this.emitWorkerCounts();
+        this.runNextTask();
+      }
+    } else {
+      const [job] = this.queue.splice(queuedTaskIndex, 1)
+      job?.reject('Task Cancelled')
+    }
+
   }
 
   async terminatePool() {

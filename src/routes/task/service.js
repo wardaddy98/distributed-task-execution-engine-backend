@@ -47,6 +47,12 @@ export const fairnessMechanism = async (apiKey) => {
 }
 
 
+export const queryAllTasks = async () => {
+    return Task.findAll({
+        order: [['createdAt', 'DESC']]
+    })
+}
+
 export const queryTasks = async (queryOptions = {}) => {
 
     const { status, priority, startDate, endDate, type, page, limit } = queryOptions
