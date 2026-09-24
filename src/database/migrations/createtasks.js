@@ -12,7 +12,7 @@ export const up = async queryInterface => {
       allowNull: false,
     },
     type: {
-      type: DataTypes.ENUM('image_processing', 'report_generation'),
+      type: DataTypes.ENUM('image_processing', 'report_generation', 'deliberate_fail_task'),
       allowNull: false,
     },
     priority: {

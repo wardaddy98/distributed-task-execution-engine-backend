@@ -14,15 +14,24 @@ async function reportGeneration() {
   })
 }
 
-parentPort.on('message', async data => {
-  //data received from main thread worker.postMessage(job.data)
+async function deliberateFailTask() {
+  //15 seconds sleep and then fail, used to exercise the retry and dead letter queue flow
+  return new Promise((_, reject) => {
+    setTimeout(() => reject('Task failed deliberately'), 15000)
+  })
+}
+
+parentPort.on('message', async taskObj => {
+  //data received from main thread worker.postMessage(job.data.toJSON())
   try {
-    const typeOfWork = data.type;
+    const typeOfWork = taskObj.type;
     let result;
     if (typeOfWork === 'image_processing') {
-      result = await imageProcessing(data)
+      result = await imageProcessing(taskObj)
+    } else if (typeOfWork === 'deliberate_fail_task') {
+      result = await deliberateFailTask(taskObj)
     } else {
-      result = await reportGeneration(data)
+      result = await reportGeneration(taskObj)
     }
     parentPort.postMessage({ success: true, result });
   } catch (error) {

@@ -14,7 +14,7 @@ const Task = sequelize.define(
       allowNull: false,
     },
     type: {
-      type: DataTypes.ENUM('image_processing', 'report_generation'),
+      type: DataTypes.ENUM('image_processing', 'report_generation', 'deliberate_fail_task'),
       allowNull: false,
     },
     priority: {
@@ -46,15 +46,6 @@ const Task = sequelize.define(
   {
     tableName: 'tasks',
     timestamps: true,
-    // indexes: [
-    //   {
-    //     name: 'tasks_dequeue_idx',
-    //     fields: ['status', { name: 'priority', order: 'DESC' }, 'createdAt'],
-    //   },
-    //   { name: 'tasks_client_created_idx', fields: ['clientId', 'createdAt'] },
-    //   { name: 'tasks_type_idx', fields: ['type'] },
-    //   { name: 'tasks_created_at_idx', fields: ['createdAt'] },
-    // ],
   },
 );
 

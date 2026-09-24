@@ -2,9 +2,6 @@ import { Worker } from 'worker_threads';
 import { emitTaskUpdate } from './taskEvents.js';
 import { emitWorkerUpdate } from './workerEvents.js';
 
-//retry logic
-//proper messages and result in pending promises resolve and reject
-
 class WorkerPool {
 
   constructor(workerScriptPath, poolSize) {
@@ -80,10 +77,11 @@ class WorkerPool {
   }
 
   async retryJob(task) {
-    if (task.retries <= 3) {
-      this.queueTask(task)
-      await task.increment('retries', { by: 1 })
+    if (task.retries < 3) {
+      task.retries += 1;
+      await task.save();
       emitTaskUpdate(task);
+      this.queueTask(task)
     } else {
       // if max retries reached update status to dead, to represent dlq
       task.status = 'dead';
@@ -127,7 +125,7 @@ class WorkerPool {
   }
 
   queueTask(taskData) {
-    return new Promise((resolve, reject) => {
+    const promise = new Promise((resolve, reject) => {
       const task = { data: taskData, resolve, reject }
 
       const priority = taskData.priority;
@@ -147,6 +145,10 @@ class WorkerPool {
 
       this.runNextTask();
     });
+
+    // to handle uncaughtErrorExpression which will be thrown inside controller, if this promise rejects in worker.on
+    promise.catch(() => { });
+    return promise;
   }
 
   cancelTask(taskId) {
