@@ -1,16 +1,16 @@
 import { parentPort } from 'worker_threads';
 
 async function imageProcessing() {
-  //15 seconds sleep for image processing
+  //30 seconds sleep for image processing
   return new Promise(resolve => {
-    setTimeout(resolve, 15000)
+    setTimeout(resolve, 30000)
   })
 }
 
 async function reportGeneration() {
-  //25 seconds sleep for report generation
+  //35 seconds sleep for report generation
   return new Promise(resolve => {
-    setTimeout(resolve, 25000)
+    setTimeout(resolve, 35000)
   })
 }
 

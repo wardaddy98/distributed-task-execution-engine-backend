@@ -10,14 +10,38 @@ export const createTask = async (payload) => {
     return task
 }
 
-export const cancelTask = async (taskId) => {
+export const cancelTask = async (taskId, apiKey) => {
     const task = await Task.findByPk(taskId);
 
     if (_.isEmpty(task)) {
         throw new BadRequestError('Task does not exist!')
     }
 
+    if (task.apiKey !== apiKey) {
+        throw new BadRequestError('This task can only be cancelled by the same API key used while creation')
+    }
+
     await task.update({ status: 'cancelled' });
+    return task
+}
+
+export const retryTask = async (taskId, apiKey) => {
+    const task = await Task.findByPk(taskId);
+
+    if (_.isEmpty(task)) {
+        throw new BadRequestError('Task does not exist!')
+    }
+
+    if (task.apiKey !== apiKey) {
+        throw new BadRequestError('This task can only be retried by the same API key used while creation')
+    }
+
+    //queued, running or completed tasks can't be retried, otherwise the same task would run twice
+    if (!['failed', 'dead', 'cancelled'].includes(task.status)) {
+        throw new BadRequestError(`Task with status '${task.status}' cannot be retried`)
+    }
+
+    await task.update({ status: 'queued', progress: 0 });
     return task
 }
 

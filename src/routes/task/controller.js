@@ -2,7 +2,7 @@ import { StatusCodes } from 'http-status-codes';
 import { workerPool } from '../../../index.js';
 import { emitTaskUpdate, taskEvents } from '../../engine/taskEvents.js';
 import { handleResponse } from '../../utils/handleResponse.js';
-import { cancelTask, createTask, fairnessMechanism, queryAllTasks, queryTasks } from './service.js';
+import { cancelTask, createTask, fairnessMechanism, queryAllTasks, queryTasks, retryTask } from './service.js';
 
 
 
@@ -23,12 +23,22 @@ export const handleCreateTask = async (req, res) => {
 export const handleCancelTask = async (req, res) => {
     const { taskId } = req.params;
 
-    const task = await cancelTask(taskId);
+    const task = await cancelTask(taskId, req.apiKey);
     emitTaskUpdate(task);
 
     await workerPool.cancelTask(task.id)
     return handleResponse(res, StatusCodes.OK, 'Task cancelled Successfully', task);
+}
 
+export const handleRetryTask = async (req, res) => {
+    const { taskId } = req.params;
+
+    const task = await retryTask(taskId, req.apiKey);
+    emitTaskUpdate(task);
+
+    //not awaited, the response is sent once the task is queued; the rejection is already handled by the pool
+    workerPool.queueTask(task);
+    return handleResponse(res, StatusCodes.OK, 'Task queued for retry', task);
 }
 
 export const handleGetTasks = async (req, res) => {
