@@ -30,8 +30,22 @@ class WorkerPool {
   createWorker() {
     const worker = new Worker(this.workerScriptPath);
 
-    worker.on('message', async ({ success, result, error }) => {
-      //{success, result, error} is the result received from worker file after performing calculation 
+    worker.on('message', async message => {
+      //progress updates keep the worker busy, only persist and emit the new progress
+      if (message.type === 'progress') {
+        const job = worker.currentJob;
+        //job is null if the task was cancelled or already finished
+        if (!job) return;
+
+        job.data.progress = message.progress;
+        await job.data.save();
+
+        emitTaskUpdate(job.data);
+        return;
+      }
+
+      //{success, result, error} is the result received from worker file after performing calculation
+      const { success, result, error } = message;
       const job = worker.currentJob;
       worker.currentJob = null;
 
@@ -41,6 +55,7 @@ class WorkerPool {
       if (success) {
         //resolve if {success:true} returned from worker file
         job.data.status = 'completed';
+        job.data.progress = 100;
         await job.data.save();
 
         emitTaskUpdate(job.data);
@@ -117,6 +132,8 @@ class WorkerPool {
 
     //update task status in db
     job.data.status = 'running';
+    //retried tasks start again from 0
+    job.data.progress = 0;
     await job.data.save();
 
     emitTaskUpdate(job.data);

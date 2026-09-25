@@ -1,7 +1,7 @@
 import _ from "lodash"
 import { Op } from "sequelize"
 import Task from "../../database/models/task.model.js"
-import { BadRequestError } from "../../middlewares/handleError.js"
+import { BadRequestError, TooManyRequestsError } from "../../middlewares/handleError.js"
 import handlePagination from "../../utils/handlePagination.js"
 
 export const createTask = async (payload) => {
@@ -21,6 +21,10 @@ export const cancelTask = async (taskId, apiKey) => {
         throw new BadRequestError('This task can only be cancelled by the same API key used while creation')
     }
 
+    if (!['running', 'queued'].includes(task.status)) {
+        throw new BadRequestError('Only running and queued tasks can be cancelled')
+    }
+
     await task.update({ status: 'cancelled' });
     return task
 }
@@ -37,7 +41,7 @@ export const retryTask = async (taskId, apiKey) => {
     }
 
     //queued, running or completed tasks can't be retried, otherwise the same task would run twice
-    if (!['failed', 'dead', 'cancelled'].includes(task.status)) {
+    if (!['dead', 'cancelled'].includes(task.status)) {
         throw new BadRequestError(`Task with status '${task.status}' cannot be retried`)
     }
 
